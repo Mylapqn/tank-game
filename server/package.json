@@ -1,0 +1,15 @@
+{
+  "name": "jump-out-server",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jimp": "^0.16.1",
+    "jump-engine": "git+https://github.com/NotRustyBot/jump-engine.git"
+  }
+}

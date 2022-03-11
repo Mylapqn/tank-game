@@ -1,0 +1,22 @@
+{
+  "name": "jump-out",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm run build --workspaces --if-present",
+    "watch": "npm --prefix client run build & npm --prefix shared run watch & npm --prefix server run shared"
+  },
+  "author": "",
+  "license": "ISC",
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "dependencies": {
+    "@types/ws": "^8.5.1",
+    "ws": "^8.5.0"
+  }
+}
