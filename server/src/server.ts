@@ -8,7 +8,7 @@ import { Projectile } from "./projectile";
 import { TankEvent } from "./event";
 import { Item, ItemSpawner } from "./item";
 
-LoadMap("../maps/map1.png");
+LoadMap("server/maps/map1.png");
 let server = createServer(function (request, response) {});
 
 let port = process.env.PORT || 20003;

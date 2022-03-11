@@ -84,9 +84,12 @@ LoadImages(() => {
     explosionTextures.push(PIXI.Loader.shared.resources["explosion3"].texture);
     explosionTextures.push(PIXI.Loader.shared.resources["explosion2"].texture);
     explosionTextures.push(PIXI.Loader.shared.resources["explosion1"].texture);
-
-    connection = new WebSocket("ws://88.100.144.84:20003/");
-    //connection = new WebSocket("ws://127.0.0.1:20003/");
+    
+    if (window.location.host.includes("coal")) {
+        connection = new WebSocket("wss://tank-game.ws.coal.games/");
+    }else{
+        connection = new WebSocket("ws://127.0.0.1:20003/");
+    }
 
     connection.binaryType = "arraybuffer";
     connection.onopen = onConnectionOpen;
