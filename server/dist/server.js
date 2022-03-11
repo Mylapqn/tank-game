@@ -10,7 +10,7 @@ const mapData_1 = require("./mapData");
 const projectile_1 = require("./projectile");
 const event_1 = require("./event");
 const item_1 = require("./item");
-(0, mapData_1.LoadMap)("../maps/map1.png");
+(0, mapData_1.LoadMap)("server/maps/map1.png");
 let server = (0, http_1.createServer)(function (request, response) { });
 let port = process.env.PORT || 20003;
 server.listen(port, function () {
