@@ -8,26 +8,25 @@ const event_1 = require("./event");
 const mapData_1 = require("./mapData");
 const player_1 = require("./player");
 const server_1 = require("./server");
-const projectileSpeed = 3;
+const projectileSpeed = 2;
 class Projectile {
     constructor(player) {
         this.destroy = 0;
         if (player != undefined) {
-            this.position = player.position;
-            this.rotation = player.rotation;
+            this.position = player.position.result();
             this.player = player;
-            this.evaluateVelocity();
+            this.velocity = new jump_engine_1.Vector(Math.cos(player.turretAngle + player.rotation), Math.sin(player.turretAngle + player.rotation)).mult(projectileSpeed);
+            this.velocity.add(player.velocity);
+            this.rotation = this.velocity.toAngle();
         }
         Projectile.list.set(Projectile.index, this);
         this.id = Projectile.index;
         Projectile.index++;
     }
-    evaluateVelocity() {
-        this.velocity = new jump_engine_1.Vector(Math.cos(this.rotation), Math.sin(this.rotation)).mult(projectileSpeed);
-    }
     update(dt) {
         if (this.destroy == 1) {
             Projectile.list.delete(this.id);
+            new event_1.TankEvent(jump_out_shared_1.EventType.hit, this.position);
             return;
         }
         let nextpos = this.position.result().add(this.velocity.result().mult(dt));
@@ -49,18 +48,16 @@ class Projectile {
                     }
                     this.destroy = 1;
                 }
-                else {
-                    this.rotation += Math.PI + Math.random() * 0.2 - 0.1;
-                    this.evaluateVelocity();
-                    this.player = player;
-                    new event_1.TankEvent(jump_out_shared_1.EventType.bounce, player.position);
-                }
                 return;
             }
         }
-        if (mapData_1.mapData.hitbox[Math.floor(nextpos.x / 10)][Math.floor(nextpos.y / 10)] == 255) {
-            this.destroy = 1;
-            return;
+        try {
+            if (mapData_1.mapData.hitbox[Math.floor(nextpos.x / 10)][Math.floor(nextpos.y / 10)] == 255) {
+                this.destroy = 1;
+                return;
+            }
+        }
+        catch (e) {
         }
         this.position = nextpos;
     }

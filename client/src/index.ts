@@ -3,18 +3,20 @@ import {
     Controls,
     ControlsDatagram,
     EventType,
-    ItemType,
     PlayerData,
     ProjectileData,
     TankEventData,
     UpdateDatagram,
 } from "jump-out-shared";
 import * as PIXI from "pixi.js";
-import { LoadImages } from "./loader";
-import { control, fire, useKeys } from "./controls";
+import { audioBuffers, LoadAudio, LoadImages } from "./loader";
+import { control, fire, useKeys, target } from "./controls";
 import { PopText } from "./text";
 import { Player } from "./player";
-import { Item, powerupNames } from "./item";
+import { Projectile } from "./projectile";
+
+export let audioCtx = new AudioContext();
+
 
 let canvas = document.getElementById("canvas") as HTMLCanvasElement;
 canvas.width = window.innerWidth;
@@ -23,17 +25,8 @@ canvas.height = window.innerHeight;
 let real = new PIXI.Container();
 export let container = new PIXI.Container();
 export let shadowContainer = new PIXI.Container();
-export let itemContainer = new PIXI.Container();
-let graphics = new PIXI.Graphics();
-graphics.beginFill(0x000000);
-graphics.drawRect(0, 0, canvas.width, 100);
-graphics.endFill();
+export let graphics = new PIXI.Graphics();
 
-graphics.beginFill(0x000000);
-graphics.drawRect(0, 100, 500, 350);
-graphics.endFill();
-graphics.alpha = 0.3;
-itemContainer.addChild(graphics);
 
 let app = new PIXI.Application({
     antialias: true,
@@ -58,37 +51,24 @@ LoadImages(() => {
     real.addChild(shadowContainer);
     real.addChild(container);
     real.addChild(new PIXI.Sprite(PIXI.Loader.shared.resources["map1_wall"].texture));
+    real.addChild(graphics);
 
     real.scale.set(canvas.height / height);
+    //real.scale.set(1);
     app.stage.addChild(real);
-    app.stage.addChild(itemContainer);
     app.stage.addChild(score);
 
-    for (let i = 0; i < 3; i++) {
-        inventorySprites.push(new PIXI.Sprite());
-        inventorySprites[i].anchor.set(0.5);
-        inventorySprites[i].position.x = canvas.width / 2 - 100 + i * 100;
-        inventorySprites[i].position.y = 45;
-        inventorySprites[i].scale.set(0.5);
-        itemContainer.addChild(inventorySprites[i]);
-        let text = new PIXI.Text("[" + (i + 1) + "]", { fill: 0xffffff, fontSize: 15 });
-        text.anchor.set(0.5);
-        text.position.x = canvas.width / 2 - 100 + i * 100;
-        text.position.y = 85;
-        itemContainer.addChild(inventorySprites[i]);
-        itemContainer.addChild(text);
-    }
 
     explosionTextures.push(PIXI.Loader.shared.resources["explosion1"].texture);
     explosionTextures.push(PIXI.Loader.shared.resources["explosion2"].texture);
     explosionTextures.push(PIXI.Loader.shared.resources["explosion3"].texture);
     explosionTextures.push(PIXI.Loader.shared.resources["explosion2"].texture);
     explosionTextures.push(PIXI.Loader.shared.resources["explosion1"].texture);
-    
+
     if (window.location.host.includes("coal")) {
         connection = new WebSocket("wss://tank-game.ws.coal.games/");
-    }else{
-        connection = new WebSocket("ws://127.0.0.1:20003/");
+    } else {
+        connection = new WebSocket("ws://10.200.140.6:20003/");
     }
 
     connection.binaryType = "arraybuffer";
@@ -110,12 +90,39 @@ LoadImages(() => {
     app.start();
 });
 
+LoadAudio();
+
+let aimAngle = 0;
+let driveSound = new Audio("./music/drive.wav");
+let driveAudio = audioCtx.createMediaElementSource(driveSound);
+driveAudio.connect(audioCtx.destination);
+driveSound.volume = 0.1;
+driveSound.loop = true;
+
+let shootSound = new Audio("./music/cannon.wav");
+
 function update(dt: number) {
-    for (let i = 0; i < projectileData.length; i++) {
-        projectiles[i].position.x += (projectileData[i].velocity.x * dt * 1000) / 60;
-        projectiles[i].position.y += (projectileData[i].velocity.y * dt * 1000) / 60;
+    //real.filters = [new PIXI.filters.NoiseFilter(.5)];
+
+    if (localPlayer) {
+        aimAngle = moduloPi(target.toAngle() - localPlayer.rotation);
+        //console.log(aimAngle, localPlayer.turretAngle);
+        if (control.y != 0) {
+            driveSound.play();
+        }
+        else if (!driveSound.paused) {
+            driveSound.pause()
+        }
+
     }
-    real.filters = [new PIXI.filters.NoiseFilter(0.05)];
+    graphics.clear();
+    graphics.beginFill(0xFFAAFF);
+
+    Projectile.list.forEach(proj => {
+        proj.update(dt)
+    })
+
+    graphics.endFill();
 
     for (const poptext of PopText.list) {
         poptext.update(dt);
@@ -141,7 +148,7 @@ let outgoing = new AutoView(new ArrayBuffer(100));
 setInterval(() => {
     if (networkReady) {
         outgoing.index = 0;
-        ControlsDatagram.serialise(outgoing, { movement: control, fire: fire, useKeys: useKeys });
+        ControlsDatagram.serialise(outgoing, { movement: control, fire: fire, useKeys: useKeys, aimAngle: aimAngle });
         connection.send(outgoing);
     }
 }, 1000 / 30);
@@ -153,6 +160,22 @@ let projectileData: Array<ProjectileData> = [];
 
 let myPosition: Vector;
 
+export let localPlayer: Player;
+
+export function getGlobalPos(sprite: PIXI.Container) {
+    return getParentPos(sprite, new Vector()).mult(1);
+}
+
+function getParentPos(sprite: PIXI.Container, pos: Vector): Vector {
+    let parent = sprite.parent;
+    if (sprite == app.stage) return pos;
+    let newVector = Vector.fromAngle(new Vector(sprite.position.x, sprite.position.y).toAngle() + parent.rotation).mult(new Vector(sprite.position.x, sprite.position.y).length());
+    pos.add(newVector);
+    pos.x *= parent.scale.x;
+    pos.y *= parent.scale.y;
+    return getParentPos(parent, pos);
+}
+
 function onConnectionMessage(e: MessageEvent) {
     let inView = new AutoView(e.data);
     let data = UpdateDatagram.deserealise(inView);
@@ -160,41 +183,13 @@ function onConnectionMessage(e: MessageEvent) {
     playerData = data.players;
     projectileData = data.projectiles;
     let deaths = data.deaths;
-    let items = data.items;
-    let itemsRemove = data.itemsRemove;
 
     let eventData = data.events;
-    for (let i = 0; i < 3; i++) {
-        let item = inView.readInt32();
-        if (item == 0) {
-            inventorySprites[i].visible = false;
-        } else {
-            if (item < 4) {
-                inventorySprites[i].visible = true;
-                inventorySprites[i].texture = PIXI.Loader.shared.resources[powerupNames.get(item)].texture;
-            }
-        }
-    }
-
-    for (const remove of itemsRemove) {
-        Item.remove(remove.itemId);
-    }
 
     for (const death of deaths) {
         Player.remove(death.tankId);
     }
 
-    for (let i = 0; i < items.length; i++) {
-        let item: Item;
-        if (!Item.list.has(items[i].id)) {
-            item = new Item(items[i].id);
-            transfer(item, items[i]);
-            item.init();
-        } else {
-            item = Item.list.get(items[i].id);
-            transfer(item, items[i]);
-        }
-    }
 
     for (let i = 0; i < playerData.length; i++) {
         if (!Player.list.has(playerData[i].id)) {
@@ -210,22 +205,15 @@ function onConnectionMessage(e: MessageEvent) {
                 -playerData[i].position.y * real.scale.y + canvas.height / 2
             );
             myPosition = playerData[i].position;
+            localPlayer = player;
         }
-    }
-
-    for (let i = 0; i < projectiles.length; i++) {
-        projectiles[i].visible = false;
     }
     for (let i = 0; i < projectileData.length; i++) {
-        projectiles[i].position.x = projectileData[i].position.x - projectileData[i].velocity.x;
-        projectiles[i].position.y = projectileData[i].position.y - projectileData[i].velocity.y;
-        projectiles[i].rotation = projectileData[i].rotation;
-
-        if (projectileData[i].destroy == 0) {
-            projectiles[i].visible = true;
-        } else {
-            projectiles[i].visible = false;
+        if (!Projectile.list.has(projectileData[i].id)) {
+            new Projectile(projectileData[i].id);
         }
+        let projectile = Projectile.list.get(projectileData[i].id);
+        transfer(projectile, projectileData[i]);
     }
 
     for (const event of eventData) {
@@ -248,10 +236,12 @@ function onConnectionMessage(e: MessageEvent) {
 
             case EventType.shoot:
                 new PopText("BANG!", event.position, real, 0xffaa00);
-                let shootSound = new Audio("./music/shoot.ogg");
-                shootSound.playbackRate = Math.random() * 0.2 + 0.9;
-                shootSound.volume = Math.min(1, 1000 / myPosition.distance(event.position)) * 0.2;
-                shootSound.play();
+                //shootSound.playbackRate = Math.random() * 0.2 + 0.9;
+                playAudio("cannon", Math.min(1, 800 / myPosition.distance(event.position)) * 0.05);
+
+
+                //shootSound.volume = Math.min(1, 800 / myPosition.distance(event.position)) * 0.2;
+                //shootSound.play();
                 break;
 
             case EventType.bounce:
@@ -266,4 +256,25 @@ function onConnectionMessage(e: MessageEvent) {
 
 function onConnectionClose(e: CloseEvent) {
     console.log("close");
+}
+function moduloPi(rot: number): number {
+    while (rot > Math.PI) rot -= Math.PI * 2;
+    while (rot < -Math.PI) rot += Math.PI * 2;
+    return rot;
+}
+
+function playAudio(bufferName: string, volume: number) {
+    if (audioBuffers[bufferName]) {
+        let audioSource = audioCtx.createBufferSource();
+        audioSource.buffer = audioBuffers[bufferName];
+        let gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0.05;
+        audioSource.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        audioSource.start();
+    }
+    else {
+        console.error("Sound '" + bufferName + "' is not a loaded buffer!")
+    }
+    //console.log(shootAudio);
 }

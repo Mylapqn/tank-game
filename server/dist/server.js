@@ -9,7 +9,6 @@ const player_1 = require("./player");
 const mapData_1 = require("./mapData");
 const projectile_1 = require("./projectile");
 const event_1 = require("./event");
-const item_1 = require("./item");
 (0, mapData_1.LoadMap)("server/maps/map1.png");
 let server = (0, http_1.createServer)(function (request, response) { });
 let port = process.env.PORT || 20003;
@@ -39,17 +38,9 @@ function main(dt) {
     av.index = 0;
     let players = [];
     let projectiles = [];
-    (0, item_1.ItemSpawner)(dt);
     for (const projectile of projectile_1.Projectile.list.values()) {
         projectile.update(dt);
         projectiles.push(projectile);
-    }
-    let items = [];
-    for (const item of item_1.Item.list.values()) {
-        item.update(dt);
-        if (item_1.Item.list.has(item.id)) {
-            items.push(item);
-        }
     }
     for (const player of player_1.Player.list.values()) {
         player.update(dt);
@@ -60,13 +51,10 @@ function main(dt) {
         projectiles: projectiles,
         events: event_1.TankEvent.list,
         deaths: player_1.Player.deaths,
-        items: items,
-        itemsRemove: item_1.Item.remove,
     };
     jump_out_shared_1.UpdateDatagram.serialise(av, updateObject);
     event_1.TankEvent.list = [];
     player_1.Player.deaths = [];
-    item_1.Item.remove = [];
     let buffer = av.buffer.slice(0, av.index + 16);
     for (const connection of exports.connections) {
         let pav = new jump_engine_1.AutoView(buffer);

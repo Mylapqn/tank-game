@@ -4,12 +4,12 @@ exports.Player = void 0;
 const jump_engine_1 = require("jump-engine");
 const jump_out_shared_1 = require("jump-out-shared");
 const event_1 = require("./event");
-const item_1 = require("./item");
 const mapData_1 = require("./mapData");
 const projectile_1 = require("./projectile");
-const rotationSpeed = 0.003;
+const rotationSpeed = 0.002;
 const tankSpeed = 0.6;
-const reloadTime = 2000;
+const reloadTime = 100;
+const turretRotationSpeed = 0.003;
 const checks = [new jump_engine_1.Vector(1, 1), new jump_engine_1.Vector(-1, 1), new jump_engine_1.Vector(1, -1), new jump_engine_1.Vector(-1, -1)];
 class Player {
     constructor(id) {
@@ -21,6 +21,8 @@ class Player {
         this.inventory = new Map();
         this.movement = new jump_engine_1.Vector(0, 0);
         this.useKeys = 0;
+        this.turretAngle = 0;
+        this.aimAngle = 0;
         this.id = id;
         while (true) {
             let x = Math.floor((Math.random() * (mapData_1.mapData.width - 20)) / 10);
@@ -37,14 +39,14 @@ class Player {
         }
         Player.list.set(id, this);
         this.reload = 0;
-        this.inventory.set(0, jump_out_shared_1.ItemType.armor);
     }
     update(dt) {
+        this.rotation = moduloPi(this.rotation);
+        this.turretAngle = moduloPi(this.turretAngle);
         if (this.useKeys != 0) {
             for (let i = 0; i < 5; i++) {
                 if ((Math.pow(2, i) & this.useKeys) == Math.pow(2, i)) {
                     if (this.inventory.has(i)) {
-                        item_1.Item.activate(this.inventory.get(i), this);
                         this.inventory.delete(i);
                     }
                 }
@@ -71,6 +73,16 @@ class Player {
                 this.rotation -= rotationSpeed * dt;
             }
         }
+        let rotateBy = turretRotationSpeed * dt;
+        let angleDif = Math.abs(this.turretAngle - this.aimAngle);
+        rotateBy = Math.min(angleDif, rotateBy);
+        if (angleDif > Math.PI) {
+            rotateBy *= -1;
+        }
+        if (this.turretAngle > this.aimAngle)
+            this.turretAngle -= rotateBy;
+        if (this.turretAngle < this.aimAngle)
+            this.turretAngle += rotateBy;
         this.velocity.x = 0;
         this.velocity.y = 0;
         if (this.movement.y != 0) {
@@ -100,4 +112,11 @@ class Player {
 exports.Player = Player;
 Player.list = new Map();
 Player.deaths = [];
+function moduloPi(rot) {
+    while (rot > Math.PI)
+        rot -= Math.PI * 2;
+    while (rot < -Math.PI)
+        rot += Math.PI * 2;
+    return rot;
+}
 //# sourceMappingURL=player.js.map

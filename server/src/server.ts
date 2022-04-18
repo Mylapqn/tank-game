@@ -1,12 +1,11 @@
 import { createServer } from "http";
 import { WebSocketServer, WebSocket, RawData } from "ws";
 import { AutoView, loop, Timer, Vector } from "jump-engine";
-import { Controls, ControlsDatagram, ItemType, PlayerDatagram, UpdateDatagram } from "jump-out-shared";
+import { Controls, ControlsDatagram, PlayerDatagram, UpdateDatagram } from "jump-out-shared";
 import { Player } from "./player";
 import { LoadMap, mapData } from "./mapData";
 import { Projectile } from "./projectile";
 import { TankEvent } from "./event";
-import { Item, ItemSpawner } from "./item";
 
 LoadMap("server/maps/map1.png");
 let server = createServer(function (request, response) {});
@@ -52,20 +51,12 @@ function main(dt: number) {
     let players = [];
 
     let projectiles = [];
-    ItemSpawner(dt);
 
     for (const projectile of Projectile.list.values()) {
         projectile.update(dt);
         projectiles.push(projectile);
     }
 
-    let items = [];
-    for (const item of Item.list.values()) {
-        item.update(dt);
-        if (Item.list.has(item.id)) {
-            items.push(item);
-        }
-    }
 
     for (const player of Player.list.values()) {
         player.update(dt);
@@ -77,14 +68,11 @@ function main(dt: number) {
         projectiles: projectiles,
         events: TankEvent.list,
         deaths: Player.deaths,
-        items: items,
-        itemsRemove: Item.remove,
     };
 
     UpdateDatagram.serialise(av, updateObject);
     TankEvent.list = [];
     Player.deaths = [];
-    Item.remove = [];
     let buffer = av.buffer.slice(0, av.index + 16);
 
     for (const connection of connections) {

@@ -3,6 +3,7 @@ export declare const ControlsDatagram: Datagram;
 export interface Controls {
     movement: Vector;
     fire: number;
+    aimAngle: number;
 }
 export declare const PlayerDatagram: Datagram;
 export declare const PlayerDestroyedDatagram: Datagram;
@@ -15,8 +16,10 @@ export interface PlayerData {
     rotation: number;
     velocity: Vector;
     id: number;
+    turretAngle: number;
 }
 export interface ProjectileData {
+    id: number;
     position: Vector;
     rotation: number;
     velocity: Vector;
@@ -31,14 +34,4 @@ export declare enum EventType {
     shoot = 1,
     hit = 2,
     bounce = 3
-}
-export interface ItemData {
-    position: Vector;
-    type: number;
-    id: number;
-}
-export declare enum ItemType {
-    boost = 1,
-    shotgun = 2,
-    armor = 3
 }

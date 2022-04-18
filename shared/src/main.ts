@@ -1,15 +1,21 @@
 import { datatype, Datagram, Vector } from "jump-engine";
 
-export const ControlsDatagram = new Datagram().addField("movement", datatype.vector32).addField("fire", datatype.int8).addField("useKeys", datatype.uint8);
+export const ControlsDatagram = new Datagram()
+    .addField("movement", datatype.vector32)
+    .addField("fire", datatype.int8)
+    .addField("useKeys", datatype.uint8)
+    .addField("aimAngle", datatype.float32);
 export interface Controls {
     movement: Vector;
     fire: number;
+    aimAngle: number;
 };
 
 export const PlayerDatagram = new Datagram()
     .addField("position", datatype.vector32)
     .addField("velocity", datatype.vector32)
     .addField("rotation", datatype.float32)
+    .addField("turretAngle", datatype.float32)
     .addField("id", datatype.int32)
     .addField("kills", datatype.int32);
 export const PlayerDestroyedDatagram = new Datagram().addField("tankId", datatype.int32);
@@ -17,6 +23,7 @@ const ProjectileDatagram = new Datagram()
     .addField("position", datatype.vector32)
     .addField("velocity", datatype.vector32)
     .addField("rotation", datatype.float32)
+    .addField("id", datatype.int32)
     .addField("destroy", datatype.int8);
 export const EventDatagram = new Datagram().addField("type", datatype.int8).addField("position", datatype.vector32);
 export const ItemDatagram = new Datagram().addField("type", datatype.int8).addField("position", datatype.vector32).addField("id", datatype.int32);
@@ -26,16 +33,16 @@ export const UpdateDatagram = new Datagram()
     .addArray("projectiles", ProjectileDatagram)
     .addArray("events", EventDatagram)
     .addArray("deaths", PlayerDestroyedDatagram)
-    .addArray("items", ItemDatagram)
-    .addArray("itemsRemove", ItemRemove);
 export interface PlayerData {
     position: Vector;
     rotation: number;
     velocity: Vector;
     id: number;
+    turretAngle: number;
 }
 
 export interface ProjectileData {
+    id: number;
     position: Vector;
     rotation: number;
     velocity: Vector;
@@ -49,20 +56,8 @@ export interface TankEventData {
     type: number;
 }
 
-export enum EventType{
+export enum EventType {
     shoot = 1,
     hit = 2,
     bounce = 3
-}
-
-export interface ItemData {
-    position: Vector;
-    type: number;
-    id: number;
-}
-
-export enum ItemType{
-    boost = 1,
-    shotgun = 2,
-    armor = 3,
 }

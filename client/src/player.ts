@@ -15,15 +15,22 @@ export class Player implements PlayerData {
     velocity: Vector;
     id: number;
     kills: number;
-    sprite: PIXI.Sprite;
+    turret: PIXI.Sprite;
     shadow: PIXI.Sprite;
     name: string;
+    sprite: PIXI.Sprite;
+    turretAngle: number = 0;
+    container: PIXI.Container;
     constructor(id: number) {
+        this.container = new PIXI.Container();
         this.id = id;
         Player.list.set(id, this);
 
-        this.sprite = new PIXI.Sprite(PIXI.Loader.shared.resources["player"].texture);
-        this.sprite.anchor.set(0.3, 0.5);
+        this.sprite = new PIXI.Sprite(PIXI.Loader.shared.resources["tank"].texture);
+        this.turret = new PIXI.Sprite(PIXI.Loader.shared.resources["turret"].texture);
+        this.turret.anchor.set(0.4, 0.5);
+        this.sprite.anchor.set(0.5, 0.5);
+        this.turret.position.set(-18, 0);
         this.sprite.tint = colors[id % colornames.length];
         this.shadow = new PIXI.Sprite(PIXI.Loader.shared.resources["tank_shadow"].texture);
         this.shadow.anchor.set(0.3, 0.5);
@@ -34,24 +41,30 @@ export class Player implements PlayerData {
             colornames[id % colors.length] +
             " " +
             country[id % country.length];
-        container.addChild(this.sprite);
-        shadowContainer.addChild(this.shadow);
+        container.addChild(this.container);
+        this.container.addChild(this.sprite);
+        this.container.addChild(this.turret);
+        //shadowContainer.addChild(this.shadow);
     }
 
     update(dt: number) {
-        this.sprite.position.x = this.position.x;
-        this.sprite.position.y = this.position.y;
-        this.sprite.rotation = this.rotation;
+        this.container.position.x = this.position.x;
+        this.container.position.y = this.position.y;
+        this.container.rotation = this.rotation;
 
-        this.shadow.position.x = this.sprite.position.x + shadowOffset.x;
-        this.shadow.position.y = this.sprite.position.y + shadowOffset.y;
-        this.shadow.rotation = this.sprite.rotation;
+        this.turret.rotation = this.turretAngle;
+        //console.log(this.turretAngle);
+
+        this.shadow.position.x = this.container.position.x + shadowOffset.x;
+        this.shadow.position.y = this.container.position.y + shadowOffset.y;
+        this.shadow.rotation = this.container.rotation;
     }
 
     static remove(id: number) {
         let toRemove = this.list.get(id);
-        toRemove.sprite.destroy();
+        toRemove.turret.destroy();
         toRemove.shadow.destroy();
+        toRemove.sprite.destroy();
         this.list.delete(id);
     }
     static list: Map<number, Player> = new Map();

@@ -1,13 +1,13 @@
 import { Vector } from "jump-engine";
-import { EventType, ItemType, PlayerData } from "jump-out-shared";
+import { EventType, PlayerData } from "jump-out-shared";
 import { TankEvent } from "./event";
-import { Item } from "./item";
 import { mapData } from "./mapData";
 import { Projectile } from "./projectile";
 
-const rotationSpeed = 0.003;
+const rotationSpeed = 0.002;
 const tankSpeed = 0.6;
-const reloadTime = 2000;
+const reloadTime = 100;
+const turretRotationSpeed = 0.003;
 
 const checks = [new Vector(1, 1), new Vector(-1, 1), new Vector(1, -1), new Vector(-1, -1)];
 
@@ -22,40 +22,43 @@ export class Player implements PlayerData {
     bounce: number = 0;
     kills: number = 0;
 
-    inventory: Map<number, ItemType> = new Map();
+    inventory: Map<number, any> = new Map();
 
     movement: Vector = new Vector(0, 0);
     useKeys: number = 0;
+    turretAngle: number = 0;
+    aimAngle: number = 0;
 
     constructor(id: number) {
         this.id = id;
         while (true) {
-            let x = Math.floor((Math.random() * (mapData.width-20)) / 10);
-            let y = Math.floor((Math.random() * (mapData.height-20)) / 10);
+            let x = Math.floor((Math.random() * (mapData.width - 20)) / 10);
+            let y = Math.floor((Math.random() * (mapData.height - 20)) / 10);
 
             if (mapData.hitbox[x][y] != 255 &&
-                mapData.hitbox[x+3][y+3] != 255 &&
-                mapData.hitbox[x+3][y-3] != 255 &&
-                mapData.hitbox[x-3][y+3] != 255 &&
-                mapData.hitbox[x-3][y-3] != 255 &&
-                mapData.hitbox[x][y] != undefined 
-                 ) {
-                    this.position = new Vector(x*10, y*10), 1+Math.round((Math.random()*100)%3);
+                mapData.hitbox[x + 3][y + 3] != 255 &&
+                mapData.hitbox[x + 3][y - 3] != 255 &&
+                mapData.hitbox[x - 3][y + 3] != 255 &&
+                mapData.hitbox[x - 3][y - 3] != 255 &&
+                mapData.hitbox[x][y] != undefined
+            ) {
+                this.position = new Vector(x * 10, y * 10), 1 + Math.round((Math.random() * 100) % 3);
                 break;
             }
         }
-        
+
         Player.list.set(id, this);
         this.reload = 0;
-        this.inventory.set(0, ItemType.armor);
     }
 
+
     update(dt: number) {
+        this.rotation = moduloPi(this.rotation);
+        this.turretAngle = moduloPi(this.turretAngle);
         if (this.useKeys != 0) {
             for (let i = 0; i < 5; i++) {
                 if ((Math.pow(2, i) & this.useKeys) == Math.pow(2, i)) {
                     if (this.inventory.has(i)) {
-                        Item.activate(this.inventory.get(i), this);
                         this.inventory.delete(i);
                     }
                 }
@@ -83,6 +86,16 @@ export class Player implements PlayerData {
                 this.rotation -= rotationSpeed * dt;
             }
         }
+        let rotateBy = turretRotationSpeed * dt;
+        let angleDif = Math.abs(this.turretAngle - this.aimAngle);
+        rotateBy = Math.min(angleDif, rotateBy);
+        if (angleDif > Math.PI) {
+            rotateBy *= -1;
+        }
+        if (this.turretAngle > this.aimAngle)
+            this.turretAngle -= rotateBy;
+        if (this.turretAngle < this.aimAngle)
+            this.turretAngle += rotateBy;
 
         this.velocity.x = 0;
         this.velocity.y = 0;
@@ -115,4 +128,10 @@ export class Player implements PlayerData {
 
     static list: Map<number, Player> = new Map();
     static deaths: { tankId: number }[] = [];
+}
+
+function moduloPi(rot: number): number {
+    while (rot > Math.PI) rot -= Math.PI * 2;
+    while (rot < -Math.PI) rot += Math.PI * 2;
+    return rot;
 }
