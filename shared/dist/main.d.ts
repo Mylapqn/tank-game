@@ -14,7 +14,6 @@ export interface PlayerData {
     position: Vector;
     rotation: number;
     velocity: Vector;
-    kills: number;
     id: number;
 }
 export interface ProjectileData {
@@ -22,6 +21,7 @@ export interface ProjectileData {
     rotation: number;
     velocity: Vector;
     destroy: number;
+    kills: number;
 }
 export interface TankEventData {
     position: Vector;
